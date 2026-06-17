@@ -1,0 +1,61 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model User {
+  id String @id @default(uuid())
+  email String @unique
+  password String
+  name String
+  createdAt DateTime @default(now())
+  accounts Account[]
+}
+
+model Account {
+  id String @id @default(uuid())
+  userId String
+  currency String
+  balance Decimal @default(0.00) @db.Decimal(18,4)
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relations
+  debits LedgerEntry[] @relation("Debits")
+  credits LedgerEntry[] @relation("Credits")
+
+  @@unique([userId, currency])
+
+}
+
+model LedgerEntry {
+  id String @id @default(uuid())
+  description String?
+  amount Decimal @db.Decimal(18,4)
+  currency String
+
+  //Origin
+  sourceAccountId String
+  sourceAccount Account @relation("Debits", fields: [sourceAccountId], references: [id])
+
+  //Destination
+  destinationAccountId String
+  destinationAccount Account @relation("Credits", fields: [destinationAccountId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([sourceAccountId])
+  @@index([destinationAccountId])
+}
+
