@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -50,15 +51,63 @@ export class UsersService {
     });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  async findOne(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with id ${id} not found`);
+    }
+
+    const {password: _, ...userWithoutPassword } = user;
+    return userWithoutPassword;
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  async update(id: string, updateUserDto: UpdateUserDto) {
+    await this.findOne(id);
+
+    const { email, password, ...resData } = updateUserDto;
+    const updateData: any = { ...resData };
+
+    if (email) {
+      updateData.email = email.toLowerCase().trim();
+    }
+
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      updateData.password = await bcrypt.hash(password, salt)
+    }
+
+    try {
+      const updateUser = await this.prisma.user.update({
+        where: { id },
+        data: updateData
+      });
+
+      const { password: _, ...userWithoutPassword } = updateUser;
+      return userWithoutPassword;
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ConflictException(
+            'The email address is already in use by another user',
+          );
+        }
+      }
+      throw new InternalServerErrorException(
+        'Something went wrong updatring the user',
+      );
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async remove(id: string) {
+    await this.findOne(id);
+
+    await this.prisma.user.delete({
+      where: { id },
+    });
+
+    return { message: `User with ID ${id} has been successfully deleted` };
   }
 }
