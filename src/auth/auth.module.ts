@@ -1,20 +1,21 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
-import { PassportModule } from '@nestjs/passport';
-import { JwtStrategy } from './strategies/jwt.strategy';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { UsersModule } from 'src/users/users.module';
+import { PassportModule } from '@nestjs/passport';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
+    UsersModule,
     PassportModule,
     JwtModule.register({
-      secret: 'SUPER_SECRET_KEY_APEX_WALLET',
+      secret: process.env.JWT_SECRET || 'SUPER_SECRET_KEY',
       signOptions: { expiresIn: '1h' },
     }),
   ],
-  providers: [JwtStrategy, AuthService],
-  exports: [JwtStrategy, PassportModule],
+  providers: [AuthService],
   controllers: [AuthController],
+  exports: [AuthService],
 })
 export class AuthModule {}

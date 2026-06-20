@@ -14,6 +14,14 @@ import { Prisma } from '@prisma/client';
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async findOneByEmail(email: string) {
+    return this.prisma.user.findUnique({
+      where: {
+        email: email,
+      },
+    });
+  }
+
   async create(createUserDto: CreateUserDto) {
     const { name, email, password } = createUserDto;
 
