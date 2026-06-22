@@ -6,14 +6,31 @@ import {
   Patch,
   Param,
   Delete,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @Get('public-info')
+  getPublicInfo() {
+    return { message: 'All look this' };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('profile')
+  getProfile(@Request() req: any) {
+    return {
+      message: 'Welcome to your safe profile',
+      user: req.user
+    };
+  }
 
   @Post()
   create(@Body() createUserDto: CreateUserDto) {

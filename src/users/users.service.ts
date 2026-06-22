@@ -9,6 +9,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
+import { WalletService } from 'src/wallet/wallet.service';
 
 @Injectable()
 export class UsersService {
@@ -29,15 +30,27 @@ export class UsersService {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     try {
-      const user = await this.prisma.user.create({
-        data: {
-          name,
-          email: email.toLowerCase().trim(),
-          password: hashedPassword,
-        },
+      const userWithoutPassword = await this.prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+          data: {
+            name,
+            email: email.toLowerCase().trim(),
+            password: hashedPassword,
+          },
+        });
+
+        await tx.wallet.create({
+          data: {
+            userId: user.id,
+            balance: 0.00,
+            currency: 'MXN',
+          },
+        });
+
+        const { password: _password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
       });
 
-      const { password: _password, ...userWithoutPassword } = user;
       return userWithoutPassword;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
