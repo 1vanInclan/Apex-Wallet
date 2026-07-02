@@ -9,7 +9,6 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
-import { WalletService } from 'src/wallet/wallet.service';
 
 @Injectable()
 export class UsersService {
@@ -42,9 +41,17 @@ export class UsersService {
         await tx.wallet.create({
           data: {
             userId: user.id,
-            balance: 0.00,
+            balance: 500.00,
             currency: 'MXN',
           },
+        });
+
+        await tx.account.createMany({
+          data: [
+            { userId: user.id, currency: 'MXN', balance: 500.0 },
+            { userId: user.id, currency: 'USD', balance: 0.0 },
+            { userId: user.id, currency: 'EUR', balance: 0.0 },
+          ],
         });
 
         const { password: _password, ...userWithoutPassword } = user;
