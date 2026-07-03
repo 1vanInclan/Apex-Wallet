@@ -55,7 +55,12 @@ model LedgerEntry {
   id String @id @default(uuid())
   description String?
   amount Decimal @db.Decimal(18,4)
-  currency String
+  convertedAmount      Decimal  @db.Decimal(18, 4)
+  exchangeRate         Decimal  @db.Decimal(18, 4)
+
+  
+  senderCurrency       String   // Moneda de la cuenta origen (ej. 'USD')
+  receiverCurrency     String   // Moneda de la cuenta destino (ej. 'MXN')
 
   //Origin
   sourceAccountId String
@@ -69,5 +74,6 @@ model LedgerEntry {
 
   @@index([sourceAccountId])
   @@index([destinationAccountId])
+  @@index([createdAt])
 }
 
