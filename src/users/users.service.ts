@@ -88,7 +88,7 @@ export class UsersService {
       throw new NotFoundException(`User with id ${id} not found`);
     }
 
-    const {password: _, ...userWithoutPassword } = user;
+    const { password: _, ...userWithoutPassword } = user;
     return userWithoutPassword;
   }
 
@@ -113,7 +113,7 @@ export class UsersService {
         data: updateData
       });
 
-      const { password: _, ...userWithoutPassword } = updateUser;
+      const { password: _password, ...userWithoutPassword } = updateUser;
       return userWithoutPassword;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apex Wallet - FX Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6">
+        <!-- Header -->
+        <div class="text-center border-b border-slate-800 pb-4">
+            <h1 class="text-2xl font-bold tracking-wide text-indigo-400">🪙 Apex Wallet</h1>
+            <p class="text-xs text-slate-400 mt-1">FX Engine & Auth Control</p>
+        </div>
+
+        <!-- Navegación por Tabs -->
+        <div class="flex border-b border-slate-800 text-sm font-semibold">
+            <button id="tabLogin" class="flex-1 pb-2 border-b-2 border-indigo-500 text-indigo-400 focus:outline-none cursor-pointer">
+                🔑 Iniciar Sesión
+            </button>
+            <button id="tabTransfer" class="flex-1 pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 focus:outline-none cursor-pointer">
+                🚀 Transferencias FX
+            </button>
+        </div>
+
+        <!-- SECCIÓN 1: FORMULARIO DE LOGIN -->
+        <div id="loginSection" class="space-y-4">
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Correo Electrónico</label>
+                    <input type="email" id="loginEmail" required placeholder="ivan1@gmail.com"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Contraseña</label>
+                    <input type="password" id="loginPassword" required placeholder="••••••••"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition">
+                </div>
+                <button type="submit" id="loginBtn"
+                    class="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold py-2.5 px-4 rounded-lg transition duration-200 shadow-md shadow-indigo-900/30 cursor-pointer">
+                    Obtener Token JWT 🔓
+                </button>
+            </form>
+            <div id="loginStatus" class="hidden text-xs text-center p-2 rounded-lg font-medium"></div>
+        </div>
+
+        <!-- SECCIÓN 2: FORMULARIO DE TRANSFERENCIA (Oculto por defecto hasta loguearse) -->
+        <div id="transferSection" class="hidden space-y-4">
+            <form id="transferForm" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">ID del Destinatario (UUID)</label>
+                    <input type="text" id="receiverUserId" required placeholder="3d806950-eb29-44c0-b4bf-c2a415edd570"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition">
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Envías</label>
+                        <select id="senderCurrency" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition">
+                            <option value="MXN">MXN</option>
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Recibe</label>
+                        <select id="receiverCurrency" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition">
+                            <option value="USD">USD</option>
+                            <option value="MXN">MXN</option>
+                            <option value="EUR">EUR</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Monto</label>
+                        <input type="number" id="amount" step="0.01" min="0.01" required placeholder="0.00"
+                            class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Descripción</label>
+                    <input type="text" id="description" placeholder="Remesa de prueba FX Engine c:"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition">
+                </div>
+
+                <button type="submit" id="submitBtn"
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold py-2.5 px-4 rounded-lg transition duration-200 shadow-md shadow-emerald-900/30 cursor-pointer">
+                    Ejecutar Transferencia Atómica 🚀
+                </button>
+            </form>
+
+            <!-- Recibo Dinámico -->
+            <div id="receiptContainer" class="hidden border border-emerald-900/50 bg-emerald-950/20 rounded-xl p-4 space-y-3">
+                <div class="flex items-center space-x-2 text-emerald-400">
+                    <span>✅</span>
+                    <h3 class="font-bold text-sm" id="receiptMessage">¡Transferencia exitosa!</h3>
+                </div>
+                <div class="text-xs space-y-1.5 text-slate-300">
+                    <p><span class="text-slate-500 font-medium">ID Transacción:</span> <span id="resId" class="font-mono text-slate-200"></span></p>
+                    <p><span class="text-slate-500 font-medium">Debitado original:</span> <span id="resDebited" class="font-semibold text-red-400"></span></p>
+                    <p><span class="text-slate-500 font-medium">Acreditado final:</span> <span id="resCredited" class="font-semibold text-emerald-400"></span></p>
+                    <p><span class="text-slate-500 font-medium">Tasa de Cambio (FX):</span> <span id="resRate" class="font-mono bg-slate-800 px-1.5 py-0.5 rounded text-indigo-300"></span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alertas de Error Globales -->
+        <div id="errorContainer" class="hidden border border-red-900/50 bg-red-950/20 rounded-xl p-4 flex items-start space-x-2 text-red-400">
+            <span>❌</span>
+            <div class="text-xs space-y-1">
+                <h3 class="font-bold text-sm">Error detectado</h3>
+                <p id="errorMessage" class="text-slate-300"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTROLADORES Y FETCH -->
+    <script>
+        // Cambia estos endpoints por los reales de tu NestJS si varían
+        const BASE_URL = 'http://localhost:3000';
+        const LOGIN_URL = `${BASE_URL}/auth/login`; 
+        const TRANSFER_URL = `${BASE_URL}/wallet/transfer`;
+
+        // Elementos de la interfaz
+        const tabLogin = document.getElementById('tabLogin');
+        const tabTransfer = document.getElementById('tabTransfer');
+        const loginSection = document.getElementById('loginSection');
+        const transferSection = document.getElementById('transferSection');
+        const errorContainer = document.getElementById('errorContainer');
+        const receiptContainer = document.getElementById('receiptContainer');
+
+        // Lógica de Tabs
+        tabLogin.addEventListener('click', () => switchTab('login'));
+        tabTransfer.addEventListener('click', () => switchTab('transfer'));
+
+        function switchTab(target) {
+            errorContainer.classList.add('hidden');
+            if (target === 'login') {
+                tabLogin.className = "flex-1 pb-2 border-b-2 border-indigo-500 text-indigo-400 focus:outline-none cursor-pointer";
+                tabTransfer.className = "flex-1 pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 focus:outline-none cursor-pointer";
+                loginSection.classList.remove('hidden');
+                transferSection.classList.add('hidden');
+            } else {
+                tabLogin.className = "flex-1 pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 focus:outline-none cursor-pointer";
+                tabTransfer.className = "flex-1 pb-2 border-b-2 border-emerald-500 text-emerald-400 focus:outline-none cursor-pointer";
+                loginSection.classList.add('hidden');
+                transferSection.classList.remove('hidden');
+                
+                // Alertar si intentan transferir sin token
+                if (!localStorage.getItem('token')) {
+                    showError('No has iniciado sesión. Ve a la pestaña de Login primero.');
+                }
+            }
+        }
+
+        function showError(msg) {
+            document.getElementById('errorMessage').textContent = msg;
+            errorContainer.classList.remove('hidden');
+        }
+
+        // ==========================================
+        // EVENTO 1: MANEJO DEL LOGIN
+        // ==========================================
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorContainer.classList.add('hidden');
+            const statusDiv = document.getElementById('loginStatus');
+            const loginBtn = document.getElementById('loginBtn');
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Autenticando...';
+
+            const payload = {
+                email: document.getElementById('loginEmail').value.trim(),
+                password: document.getElementById('loginPassword').value
+            };
+
+            try {
+                const response = await fetch(LOGIN_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) throw new Error(data.message || 'Credenciales inválidas');
+
+                // Ajusta la propiedad de abajo ('accessToken' o 'token') según responda tu auth.service
+                const token = data.access_token || data.accessToken || data.token;
+                if (!token) throw new Error('El backend no retornó ninguna propiedad de token válida.');
+
+                localStorage.setItem('token', token);
+
+                statusDiv.className = "text-xs text-center p-2 rounded-lg font-medium bg-emerald-950 text-emerald-400";
+                statusDiv.textContent = "🔒 ¡Token guardado! Ya puedes pasar a la pestaña de transferencias.";
+                statusDiv.classList.remove('hidden');
+
+                // Auto saltar a transferencias después de 1 segundo
+                setTimeout(() => switchTab('transfer'), 1000);
+
+            } catch (err) {
+                statusDiv.className = "text-xs text-center p-2 rounded-lg font-medium bg-red-950 text-red-400";
+                statusDiv.textContent = err.message;
+                statusDiv.classList.remove('hidden');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Obtener Token JWT 🔓';
+            }
+        });
+
+        // ==========================================
+        // EVENTO 2: MANEJO DE LA TRANSFERENCIA
+        // ==========================================
+        document.getElementById('transferForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorContainer.classList.add('hidden');
+            receiptContainer.classList.add('hidden');
+            const submitBtn = document.getElementById('submitBtn');
+
+            const token = localStorage.getItem('token');
+            if (!token) {
+                showError('Token ausente. Inicia sesión para autorizar la petición.');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Procesando en el Ledger...';
+
+            const payload = {
+                receiverUserId: document.getElementById('receiverUserId').value.trim(),
+                senderCurrency: document.getElementById('senderCurrency').value,
+                receiverCurrency: document.getElementById('receiverCurrency').value,
+                amount: parseFloat(document.getElementById('amount').value),
+                description: document.getElementById('description').value || 'Transferencia visual'
+            };
+
+            try {
+                const response = await fetch(TRANSFER_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    const errMsg = Array.isArray(data.message) ? data.message.join(', ') : data.message;
+                    throw new Error(errMsg || 'Error en el motor atómico');
+                }
+
+                // Renderizar los datos del recibo
+                document.getElementById('receiptMessage').textContent = data.message || 'Transferencia procesada';
+                const receipt = data.receipt || data; 
+                document.getElementById('resId').textContent = receipt.transactionId || 'N/A';
+                document.getElementById('resDebited').textContent = receipt.debited || `${payload.amount} ${payload.senderCurrency}`;
+                document.getElementById('resCredited').textContent = receipt.credited || 'N/A';
+                document.getElementById('resRate').textContent = receipt.rate || '1.0000';
+                
+                receiptContainer.classList.remove('hidden');
+
+            } catch (err) {
+                showError(err.message);
+            } {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Ejecutar Transferencia Atómica 🚀';
+            }
+        });
+    </script>
+</body>
+</html>
