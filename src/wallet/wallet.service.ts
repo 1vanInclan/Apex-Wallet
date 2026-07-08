@@ -7,6 +7,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { TransferDto } from './dto/transfer.dto';
 import { Prisma } from '@prisma/client';
 import { FxService } from './fx.service';
+import { GetHistoryQueryDto, TransactionTypeFilter } from './dto/history.dto';
 
 @Injectable()
 export class WalletService {
@@ -14,6 +15,84 @@ export class WalletService {
     private readonly prisma: PrismaService,
     private readonly fxService: FxService,
   ) {}
+
+  async getWalletHistory(userId: string, query: GetHistoryQueryDto){
+    const { page = 1, limit = 10, currency, type, startDate, endDate } = query;
+    const skip = (page - 1) * limit;
+
+    const whereConditions: any = {
+      OR: [{ sourceAccount: { userId } }, { destinationAccount: { userId } }],
+    };
+
+    if (type === TransactionTypeFilter.INCOME) {
+      whereConditions.OR = [{ destinationAccount: { userId } }];
+    } else if (type === TransactionTypeFilter.EXPENSE) {
+      whereConditions.OR = [{ sourceAccount: { userId } }]
+    }
+
+    if (currency) {
+      if (type === TransactionTypeFilter.INCOME) {
+        whereConditions.receiverCurrency = currency;
+      } else if (type === TransactionTypeFilter.EXPENSE) {
+        whereConditions.senderCurrency = currency;
+      } else {
+        whereConditions.AND = [
+          {
+            OR: [{ senderCurrency: currency }, { receiverCurrency: currency }],
+          },
+        ];
+      }
+    }
+
+    if (startDate || endDate) {
+      whereConditions.createdAt = {};
+      if (startDate) whereConditions.createdAt.gte = new Date(startDate);
+      if (endDate) whereConditions.createdAt.lte = new Date(endDate);
+    }
+
+    const [entries, totalItems] = await Promise.all([
+      this.prisma.ledgerEntry.findMany({
+        where: whereConditions,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          sourceAccount: true,
+          destinationAccount: true,
+        },
+      }),
+      this.prisma.ledgerEntry.count({ where: whereConditions })
+    ]);
+
+    const formattedData = entries.map( (entry) => {
+      const isIncome = entry.destinationAccount.userId === userId;
+
+      return {
+        id: entry.id,
+        description: entry.description,
+        amount: entry.amount,
+        convertedAmount: entry.convertedAmount,
+        exchangeRate: entry.exchangeRate,
+        createdAt: entry.createdAt,
+        type: isIncome ? 'income' : 'expense',
+        currency: isIncome ? entry.receiverCurrency : entry.senderCurrency,
+        metadata: {
+          fromAccount: entry.sourceAccount.currency,
+          toAccount: entry.destinationAccount.currency,
+        },
+      };
+    });
+
+    return {
+      data: formattedData,
+      meta: {
+        totalItems,
+        currentPage: page,
+        totalPages: Math.ceil(totalItems / limit),
+        limit,
+      },
+    };
+  }
 
   async createWallet(userId: string) {
     return this.prisma.wallet.create({
